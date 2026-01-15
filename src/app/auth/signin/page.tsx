@@ -53,6 +53,13 @@ export default function SignInPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
+          <div className="flex items-center gap-4 mb-2">
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                ← Back to Home
+              </Button>
+            </Link>
+          </div>
           <h1 className="text-2xl font-bold text-center">Sign In</h1>
         </CardHeader>
         <CardContent>

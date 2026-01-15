@@ -1,25 +1,33 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 
 // Client-side Supabase client (for use in client components)
 export const createSupabaseClient = () => {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Server-side Supabase client (for API routes and server components)
-export const createServerSupabaseClient = () => {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // In development, show helpful error
+    if (process.env.NODE_ENV === 'development') {
+      console.error(
+        '❌ Missing Supabase environment variables!\n' +
+        'Please add these to your .env.local file:\n' +
+        '  - NEXT_PUBLIC_SUPABASE_URL\n' +
+        '  - NEXT_PUBLIC_SUPABASE_ANON_KEY\n' +
+        '\nGet these from: https://supabase.com/dashboard/project/_/settings/api'
+      )
     }
+    
+    // Return a client that will fail gracefully when methods are called
+    // This prevents the app from crashing immediately
+    return createBrowserClient<Database>(
+      supabaseUrl || 'https://placeholder.supabase.co',
+      supabaseAnonKey || 'placeholder-key'
+    )
+  }
+
+  return createBrowserClient<Database>(
+    supabaseUrl,
+    supabaseAnonKey
   )
 }

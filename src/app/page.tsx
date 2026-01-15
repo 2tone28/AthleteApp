@@ -5,16 +5,39 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
 export default async function HomePage() {
-  const supabase = await createServerSupabaseClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  // Check if Supabase is configured
+  let session = null
+  const isConfigured = !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )
 
-  if (session) {
-    redirect('/dashboard')
+  if (isConfigured) {
+    try {
+      const supabase = await createServerSupabaseClient()
+      const { data } = await supabase.auth.getSession()
+      session = data.session
+      
+      if (session) {
+        redirect('/dashboard')
+      }
+    } catch (error) {
+      // If there's an error, just continue without session
+      console.error('Supabase error:', error)
+    }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {!isConfigured && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800 text-sm">
+              <strong>Setup Required:</strong> Please add your Supabase credentials to <code className="bg-yellow-100 px-1 rounded">.env.local</code> file. 
+              See README.md for instructions.
+            </p>
+          </div>
+        )}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
             AthleteConnect

@@ -34,6 +34,44 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Drop existing policies if they exist (allows re-running this migration)
+DROP POLICY IF EXISTS "Users can read their own record" ON public.users;
+DROP POLICY IF EXISTS "Users can update their own record" ON public.users;
+DROP POLICY IF EXISTS "Public can view public athlete profiles" ON public.athlete_profiles;
+DROP POLICY IF EXISTS "Athletes can view their own profile" ON public.athlete_profiles;
+DROP POLICY IF EXISTS "Verified coaches can view all athlete profiles" ON public.athlete_profiles;
+DROP POLICY IF EXISTS "Athletes can insert their own profile" ON public.athlete_profiles;
+DROP POLICY IF EXISTS "Athletes can update their own profile" ON public.athlete_profiles;
+DROP POLICY IF EXISTS "Anyone can view verified coach profiles" ON public.coach_profiles;
+DROP POLICY IF EXISTS "Coaches can insert their own profile" ON public.coach_profiles;
+DROP POLICY IF EXISTS "Coaches can update their own profile" ON public.coach_profiles;
+DROP POLICY IF EXISTS "Admins can update any coach profile" ON public.coach_profiles;
+DROP POLICY IF EXISTS "Public can view highlights of public profiles" ON public.athlete_highlights;
+DROP POLICY IF EXISTS "Athletes can manage their own highlights" ON public.athlete_highlights;
+DROP POLICY IF EXISTS "Verified coaches can view all highlights" ON public.athlete_highlights;
+DROP POLICY IF EXISTS "Public can view stats of public profiles" ON public.athlete_stats;
+DROP POLICY IF EXISTS "Athletes can manage their own stats" ON public.athlete_stats;
+DROP POLICY IF EXISTS "Verified coaches can view all stats" ON public.athlete_stats;
+DROP POLICY IF EXISTS "Coaches can view their saved athletes" ON public.saved_athletes;
+DROP POLICY IF EXISTS "Coaches can save athletes" ON public.saved_athletes;
+DROP POLICY IF EXISTS "Coaches can remove saved athletes" ON public.saved_athletes;
+DROP POLICY IF EXISTS "Athletes can view requests to them" ON public.contact_requests;
+DROP POLICY IF EXISTS "Coaches can view their own requests" ON public.contact_requests;
+DROP POLICY IF EXISTS "Verified coaches can create contact requests" ON public.contact_requests;
+DROP POLICY IF EXISTS "Athletes can update requests to them" ON public.contact_requests;
+DROP POLICY IF EXISTS "Anyone authenticated can view non-hidden threads" ON public.discussions_threads;
+DROP POLICY IF EXISTS "Authenticated users can create threads" ON public.discussions_threads;
+DROP POLICY IF EXISTS "Users can update their own threads" ON public.discussions_threads;
+DROP POLICY IF EXISTS "Admins can update any thread" ON public.discussions_threads;
+DROP POLICY IF EXISTS "Anyone authenticated can view non-hidden posts" ON public.discussions_posts;
+DROP POLICY IF EXISTS "Authenticated users can create posts" ON public.discussions_posts;
+DROP POLICY IF EXISTS "Users can update their own posts" ON public.discussions_posts;
+DROP POLICY IF EXISTS "Admins can update any post" ON public.discussions_posts;
+DROP POLICY IF EXISTS "Users can view their own reports" ON public.reports;
+DROP POLICY IF EXISTS "Admins can view all reports" ON public.reports;
+DROP POLICY IF EXISTS "Authenticated users can create reports" ON public.reports;
+DROP POLICY IF EXISTS "Admins can update reports" ON public.reports;
+
 -- Users table policies
 CREATE POLICY "Users can read their own record"
   ON public.users FOR SELECT
