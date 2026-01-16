@@ -25,10 +25,12 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null)
   const [highlights, setHighlights] = useState<any[]>([])
   const [stats, setStats] = useState<any[]>([])
+  const [schoolInterests, setSchoolInterests] = useState<any[]>([])
   const [isEditMode, setIsEditMode] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showHighlightModal, setShowHighlightModal] = useState(false)
   const [showStatModal, setShowStatModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<string>('profile')
 
   useEffect(() => {
     loadProfile()
@@ -72,8 +74,18 @@ export default function ProfilePage() {
             .eq('athlete_user_id', authUser.id)
             .order('created_at', { ascending: false })
 
+          const { data: interestsData } = await supabase
+            .from('athlete_school_interests')
+            .select(`
+              *,
+              schools (*)
+            `)
+            .eq('athlete_user_id', authUser.id)
+            .order('created_at', { ascending: false })
+
           setHighlights(highlightsData || [])
           setStats(statsData || [])
+          setSchoolInterests(interestsData || [])
         }
       } else if (userData?.role === 'coach') {
         const { data: profileData } = await supabase
@@ -223,11 +235,34 @@ export default function ProfilePage() {
             </Card>
           ) : (
             <>
+              {/* Profile Header */}
               <Card className="mb-6">
                 <CardContent className="p-6">
-                  <h2 className="text-2xl font-semibold mb-4">
-                    {profile?.first_name} {profile?.last_name}
-                  </h2>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h2 className="text-2xl font-semibold mb-2">
+                        {profile?.first_name} {profile?.last_name}
+                      </h2>
+                      <div className="flex items-center gap-2 mb-2">
+                        {profile?.sport && (
+                          <Badge variant="info">{profile.sport}</Badge>
+                        )}
+                        {profile?.positions && profile.positions.length > 0 && (
+                          <Badge variant="default">
+                            {profile.positions.join(', ')}
+                          </Badge>
+                        )}
+                        {profile?.grad_year && (
+                          <Badge variant="default">Class of {profile.grad_year}</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href="/schools">
+                        <Button variant="outline" size="sm">Browse Schools</Button>
+                      </Link>
+                    </div>
+                  </div>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-gray-600">Sport</p>
@@ -314,6 +349,57 @@ export default function ProfilePage() {
                             </Badge>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* School Interests Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-semibold">Interested Schools</h2>
+                    <Link href="/schools">
+                      <Button size="sm" variant="outline">Browse Schools</Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {schoolInterests.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 mb-4">No school interests yet</p>
+                      <Link href="/schools">
+                        <Button>Browse Schools</Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {schoolInterests.map((interest) => (
+                        <Card key={interest.id} variant="outlined">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h3 className="font-semibold">{interest.schools?.name}</h3>
+                                {interest.schools?.division && (
+                                  <Badge variant="info" className="mt-1 text-xs">
+                                    {interest.schools.division}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-2">
+                              <Badge variant="success" className="text-xs">
+                                {interest.interest_type}
+                              </Badge>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {interest.visibility === 'PUBLIC_TO_VERIFIED_COACHES' ? 'Visible to coaches' :
+                                 interest.visibility === 'PRIVATE_UNTIL_APPROVED' ? 'Private until approved' :
+                                 'Private'}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
                   )}

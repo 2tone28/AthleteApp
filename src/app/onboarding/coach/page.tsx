@@ -48,11 +48,33 @@ export default function CoachOnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      const { error } = await supabase.from('coach_profiles').insert({
-        user_id: user.id,
-        ...data,
-        verification_status: 'pending',
-      })
+      // Check if profile already exists
+      const { data: existingProfile } = await supabase
+        .from('coach_profiles')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .single()
+
+      let error
+      if (existingProfile) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('coach_profiles')
+          .update({
+            ...data,
+            verification_status: 'pending',
+          })
+          .eq('user_id', user.id)
+        error = updateError
+      } else {
+        // Insert new profile
+        const { error: insertError } = await supabase.from('coach_profiles').insert({
+          user_id: user.id,
+          ...data,
+          verification_status: 'pending',
+        })
+        error = insertError
+      }
 
       if (error) throw error
 

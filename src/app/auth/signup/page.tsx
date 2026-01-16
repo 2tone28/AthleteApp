@@ -55,18 +55,31 @@ export default function SignUpPage() {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding/${data.role === 'athlete' ? 'athlete' : 'coach'}`,
+        },
       })
 
       if (authError) throw authError
       if (!authData.user) throw new Error('Failed to create user')
 
-      // Create user record with role
-      const { error: userError } = await supabase.from('users').insert({
+      // Update user record with role (trigger may have already created it)
+      const { error: userError } = await supabase.from('users').upsert({
         id: authData.user.id,
         role: data.role,
+      }, {
+        onConflict: 'id'
       })
 
-      if (userError) throw userError
+      if (userError) {
+        // If RLS blocks it, the trigger should have created it, so just update the role
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ role: data.role })
+          .eq('id', authData.user.id)
+        
+        if (updateError) throw updateError
+      }
 
       showToast('Account created successfully!', 'success')
       

@@ -31,18 +31,42 @@ export default function SignInPage() {
   const onSubmit = async (data: z.infer<typeof signInSchema>) => {
     setIsLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       })
 
       if (error) throw error
+      if (!authData.user) throw new Error('Sign in failed')
+
+      // Ensure user record exists in users table (for demo accounts created by seed)
+      const { data: userRecord } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', authData.user.id)
+        .single()
+
+      if (!userRecord) {
+        // If user record doesn't exist, try to create it
+        // This handles cases where auth user exists but user record is missing
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            role: 'athlete', // Default, user can update later
+          })
+
+        if (insertError && !insertError.message.includes('duplicate')) {
+          console.error('Error creating user record:', insertError)
+        }
+      }
 
       showToast('Signed in successfully!', 'success')
       const redirectTo = searchParams.get('redirect') || '/dashboard'
       router.push(redirectTo)
       router.refresh()
     } catch (error: any) {
+      console.error('Sign in error:', error)
       showToast(error.message || 'Failed to sign in', 'error')
     } finally {
       setIsLoading(false)

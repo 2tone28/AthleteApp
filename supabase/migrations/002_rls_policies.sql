@@ -37,6 +37,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Drop existing policies if they exist (allows re-running this migration)
 DROP POLICY IF EXISTS "Users can read their own record" ON public.users;
 DROP POLICY IF EXISTS "Users can update their own record" ON public.users;
+DROP POLICY IF EXISTS "Users can insert their own record" ON public.users;
 DROP POLICY IF EXISTS "Public can view public athlete profiles" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "Athletes can view their own profile" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "Verified coaches can view all athlete profiles" ON public.athlete_profiles;
@@ -76,6 +77,10 @@ DROP POLICY IF EXISTS "Admins can update reports" ON public.reports;
 CREATE POLICY "Users can read their own record"
   ON public.users FOR SELECT
   USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert their own record"
+  ON public.users FOR INSERT
+  WITH CHECK (auth.uid() = id);
 
 CREATE POLICY "Users can update their own record"
   ON public.users FOR UPDATE

@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getDefaultRouteForUser } from '@/lib/routing'
+import { Nav } from '@/components/layout/Nav'
 
 export default async function HomePage() {
   // Check if Supabase is configured
@@ -19,7 +21,15 @@ export default async function HomePage() {
       session = data.session
       
       if (session) {
-        redirect('/dashboard')
+        // Get user role and redirect to appropriate default route
+        const { data: user } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+        
+        const defaultRoute = getDefaultRouteForUser(user?.role || null)
+        redirect(defaultRoute)
       }
     } catch (error) {
       // If there's an error, just continue without session
@@ -29,6 +39,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
+      <Nav />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {!isConfigured && (
           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -71,7 +82,7 @@ export default async function HomePage() {
                 Discover talented athletes, review profiles, and build your recruiting pipeline with verified athlete data.
               </p>
               <Link href="/auth/signup?role=coach">
-                <Button size="lg" variant="secondary" className="w-full">
+                <Button size="lg" className="w-full">
                   Get Started as Coach
                 </Button>
               </Link>

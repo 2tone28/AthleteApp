@@ -72,11 +72,33 @@ export default function AthleteOnboardingPage() {
       if (data.positions && data.positions.length > 0) completeness += 14
       if (data.bio) completeness += 2
 
-      const { error } = await supabase.from('athlete_profiles').insert({
-        user_id: user.id,
-        ...data,
-        profile_completeness: completeness,
-      })
+      // Check if profile already exists
+      const { data: existingProfile } = await supabase
+        .from('athlete_profiles')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .single()
+
+      let error
+      if (existingProfile) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('athlete_profiles')
+          .update({
+            ...data,
+            profile_completeness: completeness,
+          })
+          .eq('user_id', user.id)
+        error = updateError
+      } else {
+        // Insert new profile
+        const { error: insertError } = await supabase.from('athlete_profiles').insert({
+          user_id: user.id,
+          ...data,
+          profile_completeness: completeness,
+        })
+        error = insertError
+      }
 
       if (error) throw error
 

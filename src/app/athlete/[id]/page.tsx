@@ -22,9 +22,12 @@ export default function AthleteViewPage() {
   const [athlete, setAthlete] = useState<any>(null)
   const [highlights, setHighlights] = useState<any[]>([])
   const [stats, setStats] = useState<any[]>([])
+  const [schoolInterests, setSchoolInterests] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCoach, setIsCoach] = useState(false)
+  const [coachSchoolId, setCoachSchoolId] = useState<string | null>(null)
   const [showContactModal, setShowContactModal] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
 
   useEffect(() => {
@@ -50,10 +53,11 @@ export default function AthleteViewPage() {
           .eq('user_id', user.id)
           .single()
 
-        if (coachProfile?.verification_status === 'verified') {
-          setIsCoach(true)
-          checkSaved()
-        }
+      if (coachProfile?.verification_status === 'verified') {
+        setIsCoach(true)
+        setCoachSchoolId(coachProfile.school_id || null)
+        checkSaved()
+      }
       }
     } catch (error) {
       // Silently fail
@@ -102,8 +106,18 @@ export default function AthleteViewPage() {
         .eq('athlete_user_id', params.id)
         .order('created_at', { ascending: false })
 
+      const { data: interestsData } = await supabase
+        .from('athlete_school_interests')
+        .select(`
+          *,
+          schools (*)
+        `)
+        .eq('athlete_user_id', params.id as string)
+        .order('created_at', { ascending: false })
+
       setHighlights(highlightsData || [])
       setStats(statsData || [])
+      setSchoolInterests(interestsData || [])
     } catch (error: any) {
       showToast(error.message || 'Failed to load athlete profile', 'error')
       router.push('/search')
@@ -178,19 +192,27 @@ export default function AthleteViewPage() {
       <Nav />
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">
-              {athlete.first_name} {athlete.last_name}
-            </h1>
-            <p className="text-gray-600 mt-1">{athlete.sport}</p>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h1 className="text-3xl font-bold">
+                {athlete.first_name} {athlete.last_name}
+              </h1>
+              {isCoach && coachSchoolId && schoolInterests.some((i: any) => 
+                i.school_id === coachSchoolId &&
+                (i.visibility === 'PUBLIC_TO_VERIFIED_COACHES' || i.visibility === 'PRIVATE_UNTIL_APPROVED')
+              ) && (
+                <Badge variant="success">Interested in your school</Badge>
+              )}
+            </div>
+            <p className="text-gray-600">{athlete.sport}</p>
           </div>
           {isCoach && (
             <div className="flex gap-2">
               <Button variant="outline" onClick={toggleSave}>
                 {isSaved ? '★ Saved' : '☆ Save'}
               </Button>
-              <Button onClick={() => setShowContactModal(true)}>
-                Contact
+              <Button onClick={() => setShowMessageModal(true)}>
+                Message
               </Button>
             </div>
           )}
@@ -313,14 +335,159 @@ export default function AthleteViewPage() {
           </Card>
         )}
 
+        {schoolInterests.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <h2 className="text-xl font-semibold">School Interests</h2>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {schoolInterests.map((interest) => (
+                  <div key={interest.id} className="p-3 bg-gray-50 rounded">
+                    <p className="font-medium">{interest.schools?.name}</p>
+                    <Badge variant="info" className="mt-1 text-xs">
+                      {interest.interest_type}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <ContactModal
           isOpen={showContactModal}
           onClose={() => setShowContactModal(false)}
           athlete={athlete}
           onSuccess={() => setShowContactModal(false)}
         />
+
+        <StartConversationModal
+          isOpen={showMessageModal}
+          onClose={() => setShowMessageModal(false)}
+          athlete={athlete}
+          onSuccess={() => {
+            setShowMessageModal(false)
+            router.push('/messages')
+          }}
+        />
       </div>
     </div>
+  )
+}
+
+function StartConversationModal({
+  isOpen,
+  onClose,
+  athlete,
+  onSuccess,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  athlete: any
+  onSuccess: () => void
+}) {
+  const supabase = createSupabaseClient()
+  const { showToast } = useToast()
+  const router = useRouter()
+  const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleStartConversation = async () => {
+    setIsLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !athlete) return
+
+      // Check if conversation already exists
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('athlete_user_id', athlete.user_id)
+        .eq('coach_user_id', user.id)
+        .single()
+
+      let conversationId
+
+      if (existing) {
+        conversationId = existing.id
+        router.push('/messages')
+        return
+      } else {
+        // Create new conversation
+        const { data: newConv, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            athlete_user_id: athlete.user_id,
+            coach_user_id: user.id,
+            initiated_by: user.id,
+            status: 'OPEN',
+          })
+          .select('id')
+          .single()
+
+        if (convError) throw convError
+        conversationId = newConv.id
+      }
+
+      // Send initial message if provided
+      if (message.trim()) {
+        const { error: msgError } = await supabase.from('messages').insert({
+          conversation_id: conversationId,
+          sender_user_id: user.id,
+          sender_role: 'COACH',
+          body: message.trim(),
+        })
+
+        if (msgError) throw msgError
+      }
+
+      // Create notification for athlete
+      await supabase.from('notifications').insert({
+        user_id: athlete.user_id,
+        type: 'MESSAGE',
+        title: 'New conversation',
+        body: `A coach started a conversation with you`,
+        related_id: conversationId,
+      })
+
+      showToast('Conversation started!', 'success')
+      setMessage('')
+      onSuccess()
+    } catch (error: any) {
+      showToast(error.message || 'Failed to start conversation', 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (!athlete) return null
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Message ${athlete.first_name} ${athlete.last_name}`}>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Initial Message (optional)
+          </label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="Introduce yourself and start the conversation..."
+          />
+        </div>
+        <div className="flex gap-4">
+          <Button onClick={handleStartConversation} isLoading={isLoading}>
+            Start Conversation
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 

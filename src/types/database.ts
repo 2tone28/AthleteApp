@@ -105,6 +105,7 @@ export interface Database {
           id: string
           user_id: string
           school: string | null
+          school_id: string | null
           title: string | null
           sports: string[] | null
           verification_status: 'pending' | 'verified' | 'rejected'
@@ -116,6 +117,7 @@ export interface Database {
           id?: string
           user_id: string
           school?: string | null
+          school_id?: string | null
           title?: string | null
           sports?: string[] | null
           verification_status?: 'pending' | 'verified' | 'rejected'
@@ -127,6 +129,7 @@ export interface Database {
           id?: string
           user_id?: string
           school?: string | null
+          school_id?: string | null
           title?: string | null
           sports?: string[] | null
           verification_status?: 'pending' | 'verified' | 'rejected'
@@ -314,6 +317,174 @@ export interface Database {
           target_id?: string
           reason?: string
           status?: 'pending' | 'reviewed' | 'resolved'
+          created_at?: string
+        }
+      }
+      schools: {
+        Row: {
+          id: string
+          name: string
+          division: string | null
+          location: string | null
+          logo_url: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          division?: string | null
+          location?: string | null
+          logo_url?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          division?: string | null
+          location?: string | null
+          logo_url?: string | null
+          created_at?: string
+        }
+      }
+      athlete_school_interests: {
+        Row: {
+          id: string
+          athlete_user_id: string
+          school_id: string
+          interest_type: 'LIKE' | 'FOLLOW' | 'TOP_CHOICE'
+          visibility: 'PUBLIC_TO_VERIFIED_COACHES' | 'PRIVATE_UNTIL_APPROVED' | 'PRIVATE'
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          athlete_user_id: string
+          school_id: string
+          interest_type?: 'LIKE' | 'FOLLOW' | 'TOP_CHOICE'
+          visibility?: 'PUBLIC_TO_VERIFIED_COACHES' | 'PRIVATE_UNTIL_APPROVED' | 'PRIVATE'
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          athlete_user_id?: string
+          school_id?: string
+          interest_type?: 'LIKE' | 'FOLLOW' | 'TOP_CHOICE'
+          visibility?: 'PUBLIC_TO_VERIFIED_COACHES' | 'PRIVATE_UNTIL_APPROVED' | 'PRIVATE'
+          notes?: string | null
+          created_at?: string
+        }
+      }
+      conversations: {
+        Row: {
+          id: string
+          athlete_user_id: string
+          coach_user_id: string
+          initiated_by: string
+          status: 'OPEN' | 'ARCHIVED' | 'BLOCKED'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          athlete_user_id: string
+          coach_user_id: string
+          initiated_by: string
+          status?: 'OPEN' | 'ARCHIVED' | 'BLOCKED'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          athlete_user_id?: string
+          coach_user_id?: string
+          initiated_by?: string
+          status?: 'OPEN' | 'ARCHIVED' | 'BLOCKED'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_user_id: string
+          sender_role: 'ATHLETE' | 'COACH'
+          body: string
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_user_id: string
+          sender_role: 'ATHLETE' | 'COACH'
+          body: string
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          sender_user_id?: string
+          sender_role?: 'ATHLETE' | 'COACH'
+          body?: string
+          read_at?: string | null
+          created_at?: string
+        }
+      }
+      blocks: {
+        Row: {
+          id: string
+          blocker_user_id: string
+          blocked_user_id: string
+          reason: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          blocker_user_id: string
+          blocked_user_id: string
+          reason?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          blocker_user_id?: string
+          blocked_user_id?: string
+          reason?: string | null
+          created_at?: string
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'CONTACT_REQUEST' | 'MESSAGE' | 'SAVED_TO_SHORTLIST' | 'PROFILE_VIEWED'
+          title: string
+          body: string | null
+          related_id: string | null
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'CONTACT_REQUEST' | 'MESSAGE' | 'SAVED_TO_SHORTLIST' | 'PROFILE_VIEWED'
+          title: string
+          body?: string | null
+          related_id?: string | null
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'CONTACT_REQUEST' | 'MESSAGE' | 'SAVED_TO_SHORTLIST' | 'PROFILE_VIEWED'
+          title?: string
+          body?: string | null
+          related_id?: string | null
+          read_at?: string | null
           created_at?: string
         }
       }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase/client'
 import { Nav } from '@/components/layout/Nav'
@@ -41,7 +42,10 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedAthlete, setSelectedAthlete] = useState<any>(null)
   const [showContactModal, setShowContactModal] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
   const [isCoach, setIsCoach] = useState(false)
+  const [coachSchoolId, setCoachSchoolId] = useState<string | null>(null)
+  const [filterInterestedInMySchool, setFilterInterestedInMySchool] = useState(false)
 
   useEffect(() => {
     checkCoachStatus()
@@ -75,7 +79,7 @@ export default function SearchPage() {
 
       const { data: coachProfile } = await supabase
         .from('coach_profiles')
-        .select('verification_status')
+        .select('verification_status, school_id')
         .eq('user_id', user.id)
         .single()
 
@@ -85,6 +89,7 @@ export default function SearchPage() {
         return
       }
 
+      setCoachSchoolId(coachProfile?.school_id || null)
       setIsCoach(true)
     } catch (error: any) {
       showToast(error.message || 'Failed to verify coach status', 'error')
@@ -117,7 +122,16 @@ export default function SearchPage() {
 
       let query = supabase
         .from('athlete_profiles')
-        .select('*, users!inner(id)')
+        .select(`
+          *,
+          users!inner(id),
+          athlete_school_interests (
+            school_id,
+            interest_type,
+            visibility,
+            schools (name)
+          )
+        `)
         .eq('is_public', true)
 
       const sport = searchParams.get('sport')
@@ -145,7 +159,22 @@ export default function SearchPage() {
       const { data, error } = await query.limit(50)
 
       if (error) throw error
-      setAthletes(data || [])
+
+      let filteredData = data || []
+
+      // Filter by "interested in my school"
+      if (filterInterestedInMySchool && coachSchoolId) {
+        filteredData = filteredData.filter((athlete: any) => {
+          const interests = athlete.athlete_school_interests || []
+          return interests.some((interest: any) => 
+            interest.school_id === coachSchoolId &&
+            (interest.visibility === 'PUBLIC_TO_VERIFIED_COACHES' || 
+             interest.visibility === 'PRIVATE_UNTIL_APPROVED')
+          )
+        })
+      }
+
+      setAthletes(filteredData)
     } catch (error: any) {
       showToast(error.message || 'Failed to search athletes', 'error')
     } finally {
@@ -222,59 +251,79 @@ export default function SearchPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {athletes.map((athlete) => (
-              <Card key={athlete.user_id} variant="elevated">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-semibold">
-                        {athlete.first_name} {athlete.last_name}
-                      </h3>
-                      <p className="text-gray-600">{athlete.sport}</p>
+            {athletes.map((athlete) => {
+              const interests = athlete.athlete_school_interests || []
+              const isInterestedInMySchool = coachSchoolId && interests.some((i: any) => 
+                i.school_id === coachSchoolId &&
+                (i.visibility === 'PUBLIC_TO_VERIFIED_COACHES' || i.visibility === 'PRIVATE_UNTIL_APPROVED')
+              )
+
+              return (
+                <Card key={athlete.user_id} variant="elevated">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-xl font-semibold">
+                            {athlete.first_name} {athlete.last_name}
+                          </h3>
+                          {isInterestedInMySchool && (
+                            <Badge variant="success" className="text-xs">
+                              Interested in your school
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-gray-600">{athlete.sport}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleSave(athlete.user_id)}
+                        className="text-gray-400 hover:text-primary-600"
+                      >
+                        {savedAthletes.has(athlete.user_id) ? '★' : '☆'}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => toggleSave(athlete.user_id)}
-                      className="text-gray-400 hover:text-primary-600"
-                    >
-                      {savedAthletes.has(athlete.user_id) ? '★' : '☆'}
-                    </button>
-                  </div>
-                  <div className="space-y-2 mb-4">
-                    {athlete.grad_year && (
-                      <p className="text-sm">
-                        <span className="text-gray-600">Grad Year:</span> {athlete.grad_year}
-                      </p>
-                    )}
-                    {athlete.city && athlete.state && (
-                      <p className="text-sm">
-                        <span className="text-gray-600">Location:</span> {athlete.city}, {athlete.state}
-                      </p>
-                    )}
-                    {athlete.gpa && (
-                      <p className="text-sm">
-                        <span className="text-gray-600">GPA:</span> {athlete.gpa}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Link href={`/athlete/${athlete.user_id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full">
-                        View Profile
+                    <div className="space-y-2 mb-4">
+                      {athlete.grad_year && (
+                        <p className="text-sm">
+                          <span className="text-gray-600">Grad Year:</span> {athlete.grad_year}
+                        </p>
+                      )}
+                      {athlete.city && athlete.state && (
+                        <p className="text-sm">
+                          <span className="text-gray-600">Location:</span> {athlete.city}, {athlete.state}
+                        </p>
+                      )}
+                      {athlete.gpa && (
+                        <p className="text-sm">
+                          <span className="text-gray-600">GPA:</span> {athlete.gpa}
+                        </p>
+                      )}
+                      {interests.length > 0 && (
+                        <p className="text-sm">
+                          <span className="text-gray-600">Interested in:</span> {interests.length} school{interests.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href={`/athlete/${athlete.user_id}`} className="flex-1">
+                        <Button variant="outline" size="sm" className="w-full">
+                          View Profile
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedAthlete(athlete)
+                          setShowMessageModal(true)
+                        }}
+                      >
+                        Message
                       </Button>
-                    </Link>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setSelectedAthlete(athlete)
-                        setShowContactModal(true)
-                      }}
-                    >
-                      Contact
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
 
@@ -290,12 +339,36 @@ export default function SearchPage() {
             setSelectedAthlete(null)
           }}
         />
+
+        <StartConversationModal
+          isOpen={showMessageModal}
+          onClose={() => {
+            setShowMessageModal(false)
+            setSelectedAthlete(null)
+          }}
+          athlete={selectedAthlete}
+          onSuccess={() => {
+            setShowMessageModal(false)
+            setSelectedAthlete(null)
+            router.push('/messages')
+          }}
+        />
       </div>
     </div>
   )
 }
 
-function SearchFilters({ onSearch }: { onSearch: () => void }) {
+function SearchFilters({ 
+  onSearch,
+  filterInterestedInMySchool,
+  setFilterInterestedInMySchool,
+  coachSchoolId,
+}: { 
+  onSearch: () => void
+  filterInterestedInMySchool: boolean
+  setFilterInterestedInMySchool: (val: boolean) => void
+  coachSchoolId: string | null
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [search, setSearch] = useState(searchParams.get('search') || '')
@@ -314,6 +387,10 @@ function SearchFilters({ onSearch }: { onSearch: () => void }) {
     router.push(`/search?${params.toString()}`)
     onSearch()
   }
+
+  useEffect(() => {
+    onSearch()
+  }, [filterInterestedInMySchool])
 
   return (
     <div className="space-y-4">
@@ -358,6 +435,20 @@ function SearchFilters({ onSearch }: { onSearch: () => void }) {
           onChange={(e) => setMinGpa(e.target.value)}
         />
       </div>
+      {coachSchoolId && (
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="filter-interested"
+            checked={filterInterestedInMySchool}
+            onChange={(e) => setFilterInterestedInMySchool(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="filter-interested" className="text-sm text-gray-700">
+            Only show athletes interested in my school
+          </label>
+        </div>
+      )}
       <Button onClick={handleSearch} className="w-full md:w-auto">
         Search
       </Button>
@@ -428,6 +519,118 @@ function ContactModal({
           </Button>
         </div>
       </form>
+    </Modal>
+  )
+}
+
+function StartConversationModal({
+  isOpen,
+  onClose,
+  athlete,
+  onSuccess,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  athlete: any
+  onSuccess: () => void
+}) {
+  const supabase = createSupabaseClient()
+  const { showToast } = useToast()
+  const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleStartConversation = async () => {
+    setIsLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !athlete) return
+
+      // Check if conversation already exists
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('athlete_user_id', athlete.user_id)
+        .eq('coach_user_id', user.id)
+        .single()
+
+      let conversationId
+
+      if (existing) {
+        conversationId = existing.id
+      } else {
+        // Create new conversation
+        const { data: newConv, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            athlete_user_id: athlete.user_id,
+            coach_user_id: user.id,
+            initiated_by: user.id,
+            status: 'OPEN',
+          })
+          .select('id')
+          .single()
+
+        if (convError) throw convError
+        conversationId = newConv.id
+      }
+
+      // Send initial message if provided
+      if (message.trim()) {
+        const { error: msgError } = await supabase.from('messages').insert({
+          conversation_id: conversationId,
+          sender_user_id: user.id,
+          sender_role: 'COACH',
+          body: message.trim(),
+        })
+
+        if (msgError) throw msgError
+      }
+
+      // Create notification for athlete
+      await supabase.from('notifications').insert({
+        user_id: athlete.user_id,
+        type: 'MESSAGE',
+        title: 'New conversation',
+        body: `A coach started a conversation with you`,
+        related_id: conversationId,
+      })
+
+      showToast('Conversation started!', 'success')
+      setMessage('')
+      onSuccess()
+    } catch (error: any) {
+      showToast(error.message || 'Failed to start conversation', 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (!athlete) return null
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Message ${athlete.first_name} ${athlete.last_name}`}>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Initial Message (optional)
+          </label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="Introduce yourself and start the conversation..."
+          />
+        </div>
+        <div className="flex gap-4">
+          <Button onClick={handleStartConversation} isLoading={isLoading}>
+            Start Conversation
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </div>
     </Modal>
   )
 }

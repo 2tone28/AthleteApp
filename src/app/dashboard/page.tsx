@@ -30,7 +30,18 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
         
         {user.role === 'athlete' && (
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-semibold mb-4">Your Feed</h2>
+                <p className="text-gray-600 mb-4">
+                  Discover schools and see your activity.
+                </p>
+                <Link href="/athlete-feed">
+                  <Button>View Feed</Button>
+                </Link>
+              </CardContent>
+            </Card>
             <Card>
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Your Profile</h2>
@@ -38,18 +49,18 @@ export default async function DashboardPage() {
                   Complete your profile to help coaches discover you.
                 </p>
                 <Link href="/profile">
-                  <Button>View Profile</Button>
+                  <Button variant="outline">View Profile</Button>
                 </Link>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Contact Requests</h2>
+                <h2 className="text-xl font-semibold mb-4">Messages</h2>
                 <p className="text-gray-600 mb-4">
-                  View requests from college coaches.
+                  View conversations with coaches.
                 </p>
-                <Link href="/profile?tab=requests">
-                  <Button variant="outline">View Requests</Button>
+                <Link href="/messages">
+                  <Button variant="outline">View Messages</Button>
                 </Link>
               </CardContent>
             </Card>
