@@ -43,34 +43,34 @@ export function Nav() {
 
   const navItems = userRole === 'athlete' 
     ? [
-        { href: '/athlete-feed', label: 'Home' },
-        { href: '/schools', label: 'Schools' },
-        { href: '/messages', label: 'Messages' },
-        { href: '/profile', label: 'Profile' },
+        { href: '/profile', label: 'Home', icon: '🏠', isHome: true },
+        { href: '/schools/liked', label: 'Schools', icon: '🏛' },
+        { href: '/schools', label: 'Search', icon: '🔍', isSearch: true },
+        { href: '/messages', label: 'Messages', icon: '💬', isMessages: true },
       ]
     : userRole === 'coach'
     ? [
-        { href: '/profile', label: 'Home' },
-        { href: '/search', label: 'Search' },
-        { href: '/messages', label: 'Messages' },
-        { href: '/profile', label: 'Profile' },
+        { href: '/profile', label: 'Home', icon: '🏠', isHome: true },
+        { href: '/athletes/interested', label: 'Athletes', icon: '⭐', isInterested: true },
+        { href: '/search', label: 'Search', icon: '🔍', isSearch: true },
+        { href: '/messages', label: 'Messages', icon: '💬', isMessages: true },
       ]
     : [
         // Landing page nav items for unauthenticated users
-        { href: '/auth/signin', label: 'Sign In' },
-        { href: '/auth/signup', label: 'Sign Up' },
+        { href: '/auth/signin', label: 'Sign In', icon: '🔑' },
+        { href: '/auth/signup', label: 'Sign Up', icon: '✏' },
       ]
 
   // For authenticated users, logo should go to their default route
   // For unauthenticated users, logo goes to landing page
-  const logoHref = userRole ? (userRole === 'athlete' ? '/athlete-feed' : '/profile') : '/'
+  const logoHref = userRole ? (userRole === 'athlete' ? '/profile' : '/profile') : '/'
 
   return (
     <nav className="sticky top-0 z-40 bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-8">
-            <Link href={logoHref} className="text-xl font-bold text-primary-600">
+            <Link href={logoHref} className="text-2xl font-bold text-primary-600">
               AthleteConnect
             </Link>
             <div className="hidden md:flex gap-6">
@@ -79,12 +79,13 @@ export function Nav() {
                   key={item.href}
                   href={item.href}
                   className={clsx(
-                    'text-sm font-medium transition-colors',
+                    'text-base font-medium transition-colors flex items-center gap-2',
                     pathname === item.href
                       ? 'text-primary-600 border-b-2 border-primary-600 pb-1'
                       : 'text-gray-600 hover:text-gray-900'
                   )}
                 >
+                  <span className={item.isHome || item.isMessages || item.isInterested ? 'text-2xl' : 'text-xl'}>{item.icon}</span>
                   {item.label}
                 </Link>
               ))}
@@ -93,7 +94,7 @@ export function Nav() {
           {userRole ? (
             <button
               onClick={handleSignOut}
-              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-base text-gray-600 hover:text-gray-900 transition-colors"
             >
               Sign Out
             </button>
@@ -113,7 +114,8 @@ export function Nav() {
                   pathname === item.href ? 'text-primary-600' : 'text-gray-600'
                 )}
               >
-                <span className="text-xs font-medium">{item.label}</span>
+                <span className={item.isHome || item.isMessages || item.isInterested ? 'text-3xl mb-1' : 'text-2xl mb-1'}>{item.icon}</span>
+                <span className="text-sm font-medium">{item.label}</span>
               </Link>
             ))}
           </div>

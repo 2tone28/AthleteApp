@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase/client'
 import { Nav } from '@/components/layout/Nav'
@@ -122,16 +121,7 @@ export default function SearchPage() {
 
       let query = supabase
         .from('athlete_profiles')
-        .select(`
-          *,
-          users!inner(id),
-          athlete_school_interests (
-            school_id,
-            interest_type,
-            visibility,
-            schools (name)
-          )
-        `)
+        .select('*')
         .eq('is_public', true)
 
       const sport = searchParams.get('sport')
@@ -162,15 +152,40 @@ export default function SearchPage() {
 
       let filteredData = data || []
 
-      // Filter by "interested in my school"
+      // If filtering by "interested in my school", fetch interests separately
       if (filterInterestedInMySchool && coachSchoolId) {
-        filteredData = filteredData.filter((athlete: any) => {
-          const interests = athlete.athlete_school_interests || []
-          return interests.some((interest: any) => 
-            interest.school_id === coachSchoolId &&
-            (interest.visibility === 'PUBLIC_TO_VERIFIED_COACHES' || 
-             interest.visibility === 'PRIVATE_UNTIL_APPROVED')
+        const { data: interests } = await supabase
+          .from('athlete_school_interests')
+          .select('athlete_user_id, school_id, visibility')
+          .eq('school_id', coachSchoolId)
+          .or('visibility.eq.PUBLIC_TO_VERIFIED_COACHES,visibility.eq.PRIVATE_UNTIL_APPROVED')
+
+        const interestedAthleteIds = new Set(
+          (interests || []).map((i: any) => i.athlete_user_id)
+        )
+
+        filteredData = filteredData.filter((athlete: any) => 
+          interestedAthleteIds.has(athlete.user_id)
+        )
+      }
+
+      // Load interests for all athletes if coach wants to see them
+      if (coachSchoolId && filteredData.length > 0) {
+        const athleteUserIds = filteredData.map((a: any) => a.user_id)
+        const { data: allInterests } = await supabase
+          .from('athlete_school_interests')
+          .select('athlete_user_id, school_id, interest_type, visibility')
+          .in('athlete_user_id', athleteUserIds)
+
+        // Add interests to athlete data
+        filteredData = filteredData.map((athlete: any) => {
+          const athleteInterests = (allInterests || []).filter(
+            (i: any) => i.athlete_user_id === athlete.user_id
           )
+          return {
+            ...athlete,
+            athlete_school_interests: athleteInterests,
+          }
         })
       }
 

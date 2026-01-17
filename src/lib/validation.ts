@@ -31,11 +31,23 @@ export const athleteProfileSchema = z.object({
   is_public: z.boolean().optional(),
 })
 
+// Camp schema
+export const campSchema = z.object({
+  name: z.string().min(1, 'Camp name is required'),
+  location: z.string().optional(),
+  date: z.string().optional(),
+  url: z.string().url().optional().or(z.literal('')),
+})
+
 // Coach profile schemas
 export const coachProfileSchema = z.object({
-  school: z.string().min(1, 'School is required'),
-  title: z.string().min(1, 'Title is required'),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  school: z.string().min(1, 'School is required').optional().or(z.literal('')),
+  title: z.string().min(1, 'Title is required').optional().or(z.literal('')),
   sports: z.array(z.string()).optional(),
+  what_we_are_looking_for: z.string().max(2000, 'Description must be less than 2000 characters').optional(),
+  camps: z.array(campSchema).optional(),
 })
 
 // Highlight schemas

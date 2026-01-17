@@ -110,7 +110,7 @@ export default function SchoolsPage() {
     <div className="min-h-screen bg-gray-50">
       <Nav />
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Browse Schools</h1>
+        <h1 className="text-3xl font-bold mb-6">Search Schools</h1>
 
         <Card className="mb-6">
           <CardContent className="p-4">

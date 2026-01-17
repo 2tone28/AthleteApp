@@ -98,6 +98,21 @@ export default function CoachOnboardingPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-4">
+                <Input
+                  label="First Name"
+                  {...register('first_name')}
+                  error={errors.first_name?.message}
+                  placeholder="e.g., John"
+                />
+                <Input
+                  label="Last Name"
+                  {...register('last_name')}
+                  error={errors.last_name?.message}
+                  placeholder="e.g., Smith"
+                />
+              </div>
+
               <Input
                 label="School/Organization"
                 {...register('school')}
